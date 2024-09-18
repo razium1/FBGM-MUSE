@@ -3,258 +3,279 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Football-GM Query</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Football GM Query</title>
     <style>
-        #playerFaceCanvas {
-            margin: 20px 0;
+        /* Global Styles - Apple-Inspired */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f9f9f9;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
-        .d-none {
-            display: none;
+
+        h1 {
+            margin-top: 40px;
+            font-size: 2.5rem;
+            font-weight: 300;
+            color: #111;
         }
-        .player-card {
+
+        .container {
+            background-color: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-top: 30px;
+            width: 90%;
+            max-width: 800px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            font-size: 1rem;
+            margin-bottom: 8px;
+            display: block;
+            color: #777;
+        }
+
+        input[type="file"],
+        input[type="text"],
+        button {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            margin-top: 8px;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+
+        input[type="file"],
+        input[type="text"] {
+            background-color: #f7f7f7;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #007aff;
+            box-shadow: 0 0 8px rgba(0, 122, 255, 0.2);
+        }
+
+        button {
+            background-color: #007aff;
+            color: white;
+            cursor: pointer;
+            border: none;
+            font-weight: 500;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #005bb5;
+        }
+
+        button:disabled {
+            background-color: #ddd;
+            cursor: not-allowed;
+        }
+
+        .results-container {
+            margin-top: 30px;
+        }
+
+        .result-card {
+            background-color: #f1f1f1;
             padding: 20px;
-            border-radius: 10px;
-            background-color: #f8f9fa;
+            border-radius: 12px;
             margin-bottom: 20px;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            text-align: left;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        #playerFaceCanvas {
+            display: block;
+            margin: 15px auto;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 600px) {
+            .container {
+                width: 95%;
+            }
         }
     </style>
 </head>
 <body>
-<div class="container mt-5">
-    <h1 class="text-center mb-4">Football-GM Query</h1>
 
-    <!-- File Upload -->
-    <div class="mb-3">
-        <label for="uploadFile" class="form-label">Upload Football-GM League File (JSON):</label>
-        <input type="file" id="uploadFile" class="form-control">
-        <button id="uploadBtn" class="btn btn-primary mt-2">Upload File</button>
-    </div>
-
-    <!-- Query Input -->
-    <div class="mb-3">
-        <label for="queryInput" class="form-label">Ask a Question (e.g., "How many touchdowns did Casey Weber score?"):</label>
-        <input type="text" id="queryInput" class="form-control">
-        <button id="queryBtn" class="btn btn-primary mt-2">Submit Query</button>
-    </div>
-
-    <!-- Query Result -->
-    <div id="resultContainer">
-        <h3 id="resultTitle" class="text-center"></h3>
-        <p id="result" class="text-center"></p>
-
-        <!-- Player Face Canvas -->
-        <div id="playerFaceCanvasContainer" class="text-center d-none">
-            <canvas id="playerFaceCanvas" width="150" height="150"></canvas>
+    <h1>Football GM Query</h1>
+    
+    <!-- Main Container -->
+    <div class="container">
+        <!-- File Upload -->
+        <div class="form-group">
+            <label for="uploadFile">Upload Football-GM League File (JSON):</label>
+            <input type="file" id="uploadFile">
         </div>
 
-        <!-- Team Logo Placeholder -->
-        <div id="teamLogoContainer" class="d-none">
-            <img id="teamLogo" src="" alt="Team Logo" width="150" height="150">
+        <!-- Query Input -->
+        <div class="form-group">
+            <label for="queryInput">Ask a Question (e.g., "How many touchdowns did Casey Weber score?"):</label>
+            <input type="text" id="queryInput">
         </div>
+
+        <!-- Submit Button -->
+        <div class="form-group">
+            <button id="queryBtn">Submit Query</button>
+        </div>
+
+        <!-- Results -->
+        <div id="resultsContainer" class="results-container"></div>
     </div>
-</div>
 
-<script>
-    let leagueData = null;
+    <!-- Canvas for Player Face Rendering -->
+    <canvas id="playerFaceCanvas" width="150" height="150" style="display: none;"></canvas>
 
-    // Handle file upload and parse JSON
-    document.getElementById('uploadBtn').addEventListener('click', () => {
-        const fileInput = document.getElementById('uploadFile');
-        const file = fileInput.files[0];
+    <script>
+        let leagueData = null;
 
-        if (!file) {
-            alert("Please upload a JSON file.");
-            return;
-        }
+        // Handle file upload and parse JSON
+        document.getElementById('uploadFile').addEventListener('change', () => {
+            const fileInput = document.getElementById('uploadFile');
+            const file = fileInput.files[0];
 
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            const text = e.target.result;
-            try {
-                leagueData = JSON.parse(text);
-                alert('File uploaded and parsed successfully.');
-            } catch (error) {
-                alert('Error parsing the JSON file. Please check the file format.');
+            if (!file) {
+                alert("Please upload a JSON file.");
+                return;
             }
-        };
 
-        reader.readAsText(file);
-    });
-
-    // Handle user query
-    document.getElementById('queryBtn').addEventListener('click', () => {
-        const query = document.getElementById('queryInput').value.toLowerCase();
-        if (!leagueData) {
-            alert('Please upload a league file first.');
-            return;
-        }
-
-        const players = leagueData.players || [];
-        const teams = leagueData.teams || [];
-
-        let result = '';
-        let matchedPlayer = findPlayerInQuery(query, players);
-        let matchedTeam = findTeamInQuery(query, teams);
-
-        if (matchedPlayer) {
-            result = handlePlayerQuery(query, matchedPlayer);
-            renderPlayerFace(matchedPlayer.face); // Render player face using manual canvas rendering
-        } else if (matchedTeam) {
-            result = handleTeamQuery(query, matchedTeam);
-            renderTeamLogo(matchedTeam.imgURL); // Render team logo
-        } else {
-            result = 'Could not understand your query. Please ask about player or team stats.';
-        }
-
-        document.getElementById('resultTitle').textContent = "Query Result";
-        document.getElementById('result').textContent = result;
-    });
-
-    // Find player by name in query
-    function findPlayerInQuery(query, players) {
-        return players.find(player => {
-            const fullName = `${player.firstName.toLowerCase()} ${player.lastName.toLowerCase()}`;
-            return query.includes(player.firstName.toLowerCase()) && query.includes(player.lastName.toLowerCase());
-        });
-    }
-
-    // Find team by name in query
-    function findTeamInQuery(query, teams) {
-        return teams.find(team => query.includes(team.name.toLowerCase()));
-    }
-
-    // Safely handle stats fetching from the player object
-    function getPlayerStat(player, statName) {
-        if (player.stats && player.stats.length > 0 && player.stats[0][statName] !== undefined) {
-            return player.stats[0][statName];
-        }
-        return 0; // Default to 0 if stat is not found
-    }
-
-    // Function to match keywords and return the appropriate stat
-    function matchKeywords(query) {
-        const keywords = {
-            'passing touchdowns': ['passing touchdowns', 'passing tds', 'threw touchdowns'],
-            'passing attempts': ['passing attempts', 'passes thrown', 'pass attempts'],
-            'rushing touchdowns': ['rushing touchdowns', 'rushing tds', 'rushed touchdowns'],
-            'rushing attempts': ['rushing attempts', 'rush attempts', 'runs'],
-            'receiving targets': ['receiving targets', 'targets', 'was targeted'],
-            'catches': ['catches', 'receptions', 'caught'],
-            'total touchdowns': ['touchdowns', 'scored'],
-            'rushing yards': ['rushing yards', 'yards rushed'],
-            'receiving yards': ['receiving yards', 'yards caught'],
-            'passing yards': ['passing yards', 'threw yards', 'yards thrown'],
-            'overall rating': ['overall rating', 'rating'],
-            'speed': ['speed']
-        };
-
-        // Find matching keyword category
-        for (const [stat, patterns] of Object.entries(keywords)) {
-            for (const pattern of patterns) {
-                if (query.includes(pattern)) {
-                    return stat;
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const text = e.target.result;
+                try {
+                    leagueData = JSON.parse(text);
+                    console.log('League data successfully uploaded:', leagueData);
+                    alert('File uploaded successfully.');
+                } catch (error) {
+                    console.error('Error parsing the JSON file:', error);
+                    alert('Error parsing the JSON file.');
                 }
+            };
+
+            reader.readAsText(file);
+        });
+
+        // Handle user query
+        document.getElementById('queryBtn').addEventListener('click', () => {
+            const query = document.getElementById('queryInput').value.toLowerCase();
+            if (!leagueData) {
+                alert('Please upload a league file first.');
+                return;
             }
-        }
-        return null;
-    }
 
-    // Handle player queries with flexible keyword-based matching
-    function handlePlayerQuery(query, player) {
-        const stat = matchKeywords(query);
-        let response = '';
+            const players = leagueData.players || [];
+            const teams = leagueData.teams || [];
+            let result = '';
+            let matchedPlayer = findPlayerInQuery(query, players);
 
-        if (stat === 'passing touchdowns') {
-            const passingTDs = getPlayerStat(player, 'pssTD');
-            response = `${player.firstName} ${player.lastName} threw ${passingTDs} passing touchdowns in the 2024 season.`;
-        } else if (stat === 'passing attempts') {
-            const passingAttempts = getPlayerStat(player, 'pss');
-            response = `${player.firstName} ${player.lastName} attempted ${passingAttempts} passes in the 2024 season.`;
-        } else if (stat === 'rushing touchdowns') {
-            const rushingTDs = getPlayerStat(player, 'rusTD');
-            response = `${player.firstName} ${player.lastName} scored ${rushingTDs} rushing touchdowns in the 2024 season.`;
-        } else if (stat === 'rushing attempts') {
-            const rushingAttempts = getPlayerStat(player, 'rus');
-            response = `${player.firstName} ${player.lastName} had ${rushingAttempts} rushing attempts in the 2024 season.`;
-        } else if (stat === 'receiving targets') {
-            const receivingTargets = getPlayerStat(player, 'tgt');
-            response = `${player.firstName} ${player.lastName} had ${receivingTargets} receiving targets in the 2024 season.`;
-        } else if (stat === 'catches') {
-            const catches = getPlayerStat(player, 'rec');
-            response = `${player.firstName} ${player.lastName} made ${catches} receptions in the 2024 season.`;
-        } else if (stat === 'total touchdowns') {
-            const receivingTDs = getPlayerStat(player, 'recTD');
-            const rushingTDs = getPlayerStat(player, 'rusTD');
-            const totalTDs = receivingTDs + rushingTDs;
-            response = `${player.firstName} ${player.lastName} scored ${totalTDs} total touchdowns in the 2024 season.`;
-        } else if (stat === 'rushing yards') {
-            const rushingYards = getPlayerStat(player, 'rusYds');
-            response = `${player.firstName} ${player.lastName} rushed for ${rushingYards} yards in the 2024 season.`;
-        } else if (stat === 'receiving yards') {
-            const receivingYards = getPlayerStat(player, 'recYds');
-            response = `${player.firstName} ${player.lastName} had ${receivingYards} receiving yards in the 2024 season.`;
-        } else if (stat === 'passing yards') {
-            const passingYards = getPlayerStat(player, 'pssYds');
-            response = `${player.firstName} ${player.lastName} threw for ${passingYards} yards in the 2024 season.`;
-        } else if (stat === 'overall rating') {
-            response = `${player.firstName} ${player.lastName} has an overall rating of ${player.ratings[0].ovr}.`;
-        } else if (stat === 'speed') {
-            response = `${player.firstName} ${player.lastName} has a speed rating of ${player.ratings[0].spd}.`;
-        } else {
-            response = 'Player stat not recognized. Try asking about touchdowns, speed, or yards.';
+            if (matchedPlayer) {
+                result = handlePlayerQuery(query, matchedPlayer, teams);
+                renderPlayerFace(matchedPlayer.face);
+            } else {
+                result = 'No matching player found. Try a different query.';
+            }
+
+            // Display results
+            document.getElementById('resultsContainer').innerHTML = `<div class="result-card">${result}</div>`;
+        });
+
+        // Find player by name in query
+        function findPlayerInQuery(query, players) {
+            return players.find(player => {
+                const fullName = `${player.firstName.toLowerCase()} ${player.lastName.toLowerCase()}`;
+                return query.includes(player.firstName.toLowerCase()) && query.includes(player.lastName.toLowerCase());
+            });
         }
 
-        return response;
-    }
+        // Handle player query and return stats
+        function handlePlayerQuery(query, player, teams) {
+            const team = teams.find(t => t.tid === player.tid)?.name || "Unknown Team";
+            const position = player.pos || "Unknown";
+            const number = player.jerseyNumber || "Unknown";
+            const yearsPlayed = player.stats[0].yearsWithTeam || "Unknown";
 
-    // Handle team queries
-    function handleTeamQuery(query, team) {
-        return `Team: ${team.name}, Championships: ${team.championships}`;
-    }
+            let response = `Player: ${player.firstName} ${player.lastName} <br>
+                            Position: ${position}, Jersey Number: #${number}, Team: ${team}, Years Played: ${yearsPlayed}`;
 
-    // Render player face manually using Canvas
-    function renderPlayerFace(faceData) {
-        if (!faceData) return;
+            // Example query handling for touchdowns
+            if (query.includes("touchdown")) {
+                const rushingTDs = getPlayerStat(player, 'rusTD');
+                const passingTDs = getPlayerStat(player, 'pssTD');
+                const totalTDs = rushingTDs + passingTDs;
+                response += `<br> Total Touchdowns: ${totalTDs}`;
+            }
 
-        const canvas = document.getElementById('playerFaceCanvas');
-        const ctx = canvas.getContext('2d');
-        canvas.classList.remove('d-none');
+            // Example for yards
+            if (query.includes("yards")) {
+                const rushingYards = getPlayerStat(player, 'rusYds');
+                const receivingYards = getPlayerStat(player, 'recYds');
+                const passingYards = getPlayerStat(player, 'pssYds');
+                response += `<br> Rushing Yards: ${rushingYards}, Receiving Yards: ${receivingYards}, Passing Yards: ${passingYards}`;
+            }
 
-        // Clear previous drawing
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+            return response;
+        }
 
-        // Draw basic head (using color)
-        ctx.fillStyle = faceData.body.color || "#f1c27d"; // Default skin color
-        ctx.beginPath();
-        ctx.arc(75, 75, 70, 0, 2 * Math.PI);
-        ctx.fill();
+        // Fetch player stat from the player object
+        function getPlayerStat(player, statName) {
+            if (player.stats && player.stats.length > 0 && player.stats[0][statName] !== undefined) {
+                return player.stats[0][statName];
+            }
+            return 0; // Return 0 if stat is not available
+        }
 
-        // Example face details (eyes, nose, etc.)
-        ctx.fillStyle = "#000"; // Black eyes
-        ctx.beginPath();
-        ctx.arc(55, 65, 5, 0, 2 * Math.PI); // Left eye
-        ctx.arc(95, 65, 5, 0, 2 * Math.PI); // Right eye
-        ctx.fill();
+        // Render player face manually using Canvas
+        function renderPlayerFace(faceData) {
+            if (!faceData) return;
 
-        // Draw mouth
-        ctx.strokeStyle = "#000";
-        ctx.beginPath();
-        ctx.moveTo(55, 100);
-        ctx.quadraticCurveTo(75, 110, 95, 100); // Smiling mouth
-        ctx.stroke();
-    }
+            const canvas = document.getElementById('playerFaceCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.style.display = 'block'; // Show canvas
 
-    // Render team logo
-    function renderTeamLogo(imgURL) {
-        const logo = document.getElementById('teamLogo');
-        const logoContainer = document.getElementById('teamLogoContainer');
-        logo.src = imgURL || 'https://via.placeholder.com/150'; // Default placeholder
-        logoContainer.classList.remove('d-none');
-    }
-</script>
+            // Clear previous drawing
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+            // Draw basic head (using color)
+            ctx.fillStyle = faceData.body.color || "#f1c27d"; // Default skin color
+            ctx.beginPath();
+            ctx.arc(75, 75, 70, 0, 2 * Math.PI);
+            ctx.fill();
+
+            // Example face details (eyes, nose, etc.)
+            ctx.fillStyle = "#000"; // Black eyes
+            ctx.beginPath();
+            ctx.arc(55, 65, 5, 0, 2 * Math.PI); // Left eye
+            ctx.arc(95, 65, 5, 0, 2 * Math.PI); // Right eye
+            ctx.fill();
+
+            // Draw mouth
+            ctx.strokeStyle = "#000";
+            ctx.beginPath();
+            ctx.moveTo(55, 100);
+            ctx.quadraticCurveTo(75, 110, 95, 100); // Smiling mouth
+            ctx.stroke();
+        }
+    </script>
 
 </body>
 </html>
